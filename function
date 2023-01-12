@@ -1,0 +1,105 @@
+library(tidyverse)
+library(stringr)
+library(readxl)
+
+load("bigdataV2.Rda")
+load("Tables.Rda")
+
+tables1<-separate(tables,value,into=c("first","second"),sep="\\s",extra="merge") #split after the first white space
+colnames(tables1)<- c("SERIES_NAME","Description","tlabel","tname") 
+
+table_detail <- read_excel("z1_tables_description-editted.xlsx",sheet="Table 1")
+
+
+bigdataV2<-bigdataV2 %>% filter(status2=="Q") #only quarterly data
+
+##############################################################################################################
+##series prefix
+prefix<-bigdataV2[,c("SERIES_PREFIX","SERIES_NAME")]
+prefix$title1<-substr(prefix$SERIES_NAME,1,nchar(prefix$SERIES_NAME)-2)
+prefix<-prefix[,c("SERIES_PREFIX","title1")]
+prefix<-unique(prefix)
+prefix<- prefix %>% group_by(SERIES_PREFIX) %>% count()
+
+##meaning of each prefix
+mprefix<-data.frame(SERIES_PREFIX=c("FA","FC","FG","FI","FL","FR","FS","FU","FV","LA","LM","PC"),meaning=c("Transactions at a seasonally adjusted annual rate (SAAR)",
+                                                                                                           "Change in unadjusted level","Growth rate, seasonally adjusted (SA)",
+                                                                                                           "Index","Level, not seasonally adjusted (NSA)","Revaluation",
+                                                                                                           "	Seasonal Factor","Transactions, not seasonally adjusted (NSA)",
+                                                                                                           "Other changes in volume","Level, seasonally adjusted (SA)",
+                                                                                                           "Level, market value, not seasonally adjusted (NSA)","Percent change in index"))
+
+prefix<-left_join(prefix,mprefix,by = "SERIES_PREFIX")
+
+##description of all data sets
+description<-bigdataV2[c("short description")]
+description<-unique(description)
+
+##prefix and description of all data sets
+prds<-bigdataV2[c("SERIES_NAME","short description")]
+prds$title1<-substr(prds$SERIES_NAME,1,nchar(prds$SERIES_NAME)-2)
+prds<-prds[,c("title1","short description")]
+prds<-unique(prds)
+########################################################################################################
+
+# z1_shiny<-left_join(bigdataV2,prefix,by="SERIES_PREFIX")
+# z1_shiny<-left_join(tables1,z1_shiny,by="SERIES_NAME")
+
+z1_shiny<-left_join(tables1,bigdataV2,by="SERIES_NAME")
+z1_shiny<-left_join(z1_shiny,prefix,by = "SERIES_PREFIX")
+
+z1_shiny[which(z1_shiny$status=="ND"),"value"]<-NA
+
+#z1_shiny<-z1_shiny[,c("SERIES_PREFIX","meaning","second","SERIES_NAME","Description","date","value","UNIT")]
+
+z1_shiny<-z1_shiny[,c("SERIES_PREFIX","meaning","tname","SERIES_NAME","Description","date","value","UNIT")]
+
+z1_shiny$meaning<-as.character(z1_shiny$meaning)
+z1_shiny<-as.data.frame(z1_shiny)
+
+
+save(z1_shiny,file = "z1_shiny.Rda")
+
+###########################################Some Functions######################################################
+
+#x is a vector of series
+series<-function(x) {
+  
+  subset(z1_shiny,SERIES_NAME %in% x)
+}
+
+# list of tables
+tables<-function() {
+  
+  z1_shiny %>% group_by(tname) %>% count() %>% select(tname)
+}
+
+# list of tables: try base R
+tables<-function() {
+  
+  z1_shiny %>% group_by(tname) %>% count() %>% select(tname)
+}
+
+#list of tables and series
+tables<-function() {
+  
+  z1_shiny %>% group_by(tname) %>% count() %>% select(tname)
+}
+
+#return all tables or series with a search word
+
+
+#definition of a table
+
+
+#function for meaning of prefix
+
+
+#having all tables in one place
+
+
+#visualization of transaction
+
+
+#search based on name of series, name of table, prefix
+
